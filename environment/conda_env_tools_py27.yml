@@ -1,0 +1,10 @@
+name: py2.7
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=2.7.15
+  - bowtie=1.2.3
+  - bowtie2=2.2.5
+  - tophat=2.1.1

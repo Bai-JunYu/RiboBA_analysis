@@ -1,0 +1,10 @@
+.Rproj.user/
+.Rhistory
+.RData
+*.tmp
+*.log
+.DS_Store
+Rplots.pdf
+data_small/
+figures/data/
+figures/data_prepare_status.csv

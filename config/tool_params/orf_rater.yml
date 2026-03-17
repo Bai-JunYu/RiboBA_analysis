@@ -1,0 +1,60 @@
+tool: orf_rater
+entry_script: tools_orf_prediction/run_orf_rater.sh
+output_root_default: ../../RiboBA_analysis_data/processed_data/tools_orf_prediction
+
+inputs:
+  source_bam_dir: "{output_root}/price/intermediate/map_tx"
+  source_bam_glob: "*sorted.bam"
+  genome_fasta: data/genome/Homo_sapiens.GRCh38.dna.primary_assembly.fa
+  gtf: data/gtf/Homo_sapiens.GRCh38.109.gtf
+
+prepare:
+  gtf_to_bed:
+    gtfToGenePred: software/gtfToGenePred
+    genePredToBed: software/genePredToBed
+    output_bed: "{output_root}/orf_rater/prepare/Homo_sapiens.GRCh38.109.bed"
+  sample_staging_dir: "{output_root}/orf_rater/results"
+
+orf_calling:
+  prune_transcripts:
+    p: 15
+    v: true
+  make_tfams:
+    v: true
+  find_orfs_and_types:
+    codons: [ATG, CTG, GTG, TTG, ACG, AAG, AGG, ATA, ATT, ATC]
+    p: 15
+    v: true
+  psite_trimmed:
+    p: 15
+    v: true
+    tallyfile: tallies.txt
+    sample_read_length_windows:
+      SRR8449566: {minrdlen: 28, maxrdlen: 35}
+      SRR23242344: {minrdlen: 28, maxrdlen: 32}
+      SRR23242345: {minrdlen: 28, maxrdlen: 33}
+      SRR23242346: {minrdlen: 30, maxrdlen: 41}
+      SRR23242347: {minrdlen: 31, maxrdlen: 39}
+      SRR2433794: {minrdlen: 23, maxrdlen: 33}
+      SRR7073124: {minrdlen: 36, maxrdlen: 38}
+      SRR8449567: {minrdlen: 24, maxrdlen: 34}
+      SRR8449568: {minrdlen: 19, maxrdlen: 30}
+  regress_orfs:
+    p: 1
+    v: true
+  rate_regression_output:
+    p: 15
+    v: true
+    csv: rate_regression.csv
+  make_orf_bed:
+    minrating: 0
+  quantify_orfs:
+    p: 15
+    v: true
+    csv: quant.csv
+    minrating: 0
+
+outputs:
+  tool_root: "{output_root}/orf_rater"
+  prepare_dir: "{output_root}/orf_rater/prepare"
+  sample_dir: "{output_root}/orf_rater/results/{sample}"

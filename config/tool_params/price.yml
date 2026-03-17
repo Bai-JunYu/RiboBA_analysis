@@ -1,0 +1,51 @@
+tool: price
+entry_script: tools_orf_prediction/run_price.sh
+output_root_default: ../../RiboBA_analysis_data/processed_data/tools_orf_prediction
+
+inputs:
+  fastq_glob: data/p4/lnc_circRNA/*fq
+  genome_fasta: data/genome/Homo_sapiens.GRCh38.dna.primary_assembly.fa
+  gtf: data/gtf/Homo_sapiens.GRCh38.109.gtf
+
+prepare:
+  star_genome_generate:
+    runThreadN: 15
+    genomeSAsparseD: 2
+    sjdbOverhang: 30
+    genomeDir: "{output_root}/price/prepare/index/hsa"
+  gedi_index_genome:
+    output_dir: "{output_root}/price/prepare/indexgenome"
+    output_oml: "{output_root}/price/prepare/indexgenome/Homo_sapiens.GRCh38.109.oml"
+    flags: [-nobowtie, -nokallisto, -nostar]
+
+mapping:
+  star:
+    runThreadN: 15
+    outSAMtype: BAM SortedByCoordinate
+    outSAMattributes: [MD, NH]
+    alignEndsType: EndToEnd
+    outFilterType: BySJout
+    outFilterMultimapNmax: 20
+    alignSJoverhangMin: 8
+    alignSJDBoverhangMin: 1
+    outFilterMismatchNmax: 2
+    alignIntronMin: 20
+    alignIntronMax: 1000000
+    alignMatesGapMax: 1000000
+    chimSegmentMin: 20
+  sambamba_sort:
+    enabled: true
+
+orf_calling:
+  gedi_price:
+    mode: Price
+  gedi_viewcit:
+    mode: ViewCIT
+    output_format: bed
+
+outputs:
+  tool_root: "{output_root}/price"
+  prepare_dir: "{output_root}/price/prepare"
+  map_tx_dir: "{output_root}/price/intermediate/map_tx"
+  price_prefix_dir: "{output_root}/price/results"
+  bed_suffix: .orfs.bed

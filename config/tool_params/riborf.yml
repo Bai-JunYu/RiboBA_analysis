@@ -1,0 +1,47 @@
+tool: riborf
+entry_script: tools_orf_prediction/run_ribORF.sh
+output_root_default: ../../RiboBA_analysis_data/processed_data/tools_orf_prediction
+
+inputs:
+  fastq_glob: data/p4/lnc_circRNA/*fq
+  genome_fasta: data/genome/Homo_sapiens.GRCh38.dna.primary_assembly.fa
+  gtf: data/gtf/Homo_sapiens.GRCh38.109.gtf
+
+prepare:
+  bowtie2_build:
+    output_prefix: "{output_root}/riborf/prepare/bowtie2_index/hsa"
+  tophat2_transcriptome_index:
+    output_prefix: "{output_root}/riborf/prepare/transcriptome_data/known"
+  ORFannotate:
+    start_codons: [ATG, CTG, GTG, TTG, AAG, ACG, AGG, ATA, ATC, ATT]
+    min_aa_length: 15
+    output_dir: "{output_root}/riborf/prepare"
+
+mapping:
+  tophat2:
+    no_novel_juncs: true
+    library_type: fr-unstranded
+    read_realign_edit_dist: 0
+    segment_length: 20
+    min_anchor_length: 5
+    min_intron_length: 50
+    num_threads: 5
+    p: 15
+    no_convert_bam: true
+    no_coverage_search: true
+
+orf_calling:
+  readDist:
+    input: accepted_hits.sam
+  offsetCorrect:
+    input: accepted_hits.sam
+    offset_file: offset.corretion.parameters.txt
+  ribORF:
+    input: corrected.mapping.sam
+    candidate_orf: "{output_root}/riborf/prepare/candidateORF.genepred.txt"
+
+outputs:
+  tool_root: "{output_root}/riborf"
+  prepare_dir: "{output_root}/riborf/prepare"
+  sample_dir: "{output_root}/riborf/results/{sample}"
+  result_dirname: ribORF_result

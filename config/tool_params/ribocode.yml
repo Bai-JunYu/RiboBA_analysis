@@ -1,0 +1,41 @@
+tool: ribocode
+entry_script: tools_orf_prediction/run_ribocode.sh
+output_root_default: ../../RiboBA_analysis_data/processed_data/tools_orf_prediction
+
+inputs:
+  fastq_glob: data/p4/lnc_circRNA/*norrna.fq
+  genome_fasta: data/genome/Homo_sapiens.GRCh38.dna.primary_assembly.fa
+  gtf: data/gtf/Homo_sapiens.GRCh38.109.gtf
+  star_index_dir: "{output_root}/price/prepare/index/hsa"
+
+prepare:
+  prepare_transcripts:
+    output_dir: "{output_root}/ribocode/prepare"
+
+mapping:
+  star:
+    runThreadN: 15
+    outFilterMismatchNmax: 2
+    outSAMtype: BAM SortedByCoordinate
+    quantMode: [TranscriptomeSAM, GeneCounts]
+    outFilterMultimapNmax: 1
+    alignEndsType: EndToEnd
+  sambamba_sort:
+    enabled: true
+
+orf_calling:
+  metaplots:
+    s: no
+    f0_percent: 0.4
+    m: 19
+    M: 42
+  RiboCode:
+    l: no
+    b: true
+    A: [CTG, GTG, TTG, ACG, AAG, AGG, ATA, ATT, ATC]
+
+outputs:
+  tool_root: "{output_root}/ribocode"
+  prepare_dir: "{output_root}/ribocode/prepare"
+  map_tx_dir: "{output_root}/ribocode/intermediate/map_tx"
+  result_prefix_dir: "{output_root}/ribocode/results"
