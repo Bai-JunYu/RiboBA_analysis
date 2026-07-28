@@ -1,16 +1,13 @@
 # Quickstart
 
-This repository is code-only and is designed to work with:
-- `RiboBA_analysis_data` (provided separately, e.g. Zenodo)
-- public raw/reference files downloaded by users
+This repository is code-only.
 
 ## 1) Directory layout
 
 From repo root (`RiboBA-analysis`):
 
 - code: `./`
-- external data root: `../RiboBA_analysis_data/`
-- optional public inputs root (FASTQ/FASTA/GTF etc., user-downloaded): `../public_inputs/`
+- external data root (default): `../RiboBA_analysis_data/`
 
 Expected figure-ready inputs:
 
@@ -27,11 +24,10 @@ conda env create -f environment/conda_env_tools_py37.yml
 
 ## 3) Check external dependencies
 
-ORF-tool shell workflows require command-line tools on PATH and several external binaries/files.
-Use the checker script with your own public-input root directory.
+`RiboBase` is required by ORF-tool workflows.
 
 ```bash
-bash environment/check_tool_dependencies.sh /path/to/public_inputs_root
+bash environment/check_tool_dependencies.sh /path/to/RiboBase
 ```
 
 ## 4) Run figures (example)
@@ -49,9 +45,8 @@ Outputs are written to `figures/*.pdf`.
 ```bash
 cd /path/to/RiboBA-analysis
 
-# [arg1] public-input root (script var name is PUBLIC_INPUTS_DIR for compatibility)
-# [arg2] output root
-bash tools_orf_prediction/run_price.sh /path/to/public_inputs_root ../RiboBA_analysis_data/processed_data/tools_orf_prediction
+# [arg1] RiboBase root, [arg2] output root
+bash tools_orf_prediction/run_price.sh /path/to/RiboBase ../RiboBA_analysis_data/processed_data/tools_orf_prediction
 ```
 
 Each tool writes to:
@@ -63,4 +58,3 @@ Each tool writes to:
 - All scripts are expected to run with relative paths from repo root.
 - Optional override for data root: `RIBOBA_DATA_DIR=/abs/path/to/RiboBA_analysis_data`.
 - Tool parameter snapshots are under `config/tool_params/*.yml`.
-- Raw FASTQ/FASTA/GTF and other large public inputs are not bundled in this repo.

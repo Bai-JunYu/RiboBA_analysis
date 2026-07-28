@@ -7,7 +7,29 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(grid)
   library(patchwork)
+  library(scales)
 })
+
+# Pitfall 2 fix: cairo_pdf mis-kerns TrueType fonts (e.g. Arial) on this Linux
+# setup even when the font is correctly installed. Load Arial via showtext so
+# text is shaped/outlined correctly; keep cairo_pdf as the ggsave device.
+# dpi must match the ggsave dpi (600) for correct text sizing.
+if (requireNamespace("showtext", quietly = TRUE) &&
+    requireNamespace("sysfonts", quietly = TRUE)) {
+  .arial_dir <- "/usr/share/fonts/truetype/msttcorefonts"
+  if (file.exists(file.path(.arial_dir, "Arial.ttf")) &&
+      !"Arial" %in% sysfonts::font_families()) {
+    sysfonts::font_add(
+      family     = "Arial",
+      regular    = file.path(.arial_dir, "Arial.ttf"),
+      bold       = file.path(.arial_dir, "Arial_Bold.ttf"),
+      italic     = file.path(.arial_dir, "Arial_Italic.ttf"),
+      bolditalic = file.path(.arial_dir, "Arial_Bold_Italic.ttf")
+    )
+  }
+  showtext::showtext_auto()
+  showtext::showtext_opts(dpi = 600)
+}
 
 get_script_dir <- function() {
   args <- commandArgs(trailingOnly = FALSE)
@@ -181,7 +203,7 @@ prepare_fig_s1_data <- function(sim_par_lst, par_lst) {
   panel_e_sim <- tibble(
     base = factor(names(susc_ratio(sim3_bias)), levels = c("A", "C", "G", "T")),
     value = as.numeric(susc_ratio(sim3_bias)),
-    type = "Expected"
+    type = "Ground truth"
   )
 
   est3_list <- lapply(par_lst[[cond3]], function(p) susc_ratio(p$cut_bias$s7))
@@ -218,27 +240,33 @@ plot_fig_s1 <- function(fig_data, base_family = "Arial", base_size = 8, line_w =
     "P1" = "#D55E00"
   )
 
+  series_cols_a <- c(
+    "Ground truth (simulated)" = "#0072B2",
+    "RiboBA estimated (mean ± SD)" = "black"
+  )
   p_a <- ggplot() +
     geom_line(
       data = fig_data$panel_a_sim,
-      aes(dist, pmf, colour = cond),
+      aes(dist, pmf, colour = "Ground truth (simulated)"),
       linewidth = 0.4
     ) +
     geom_errorbar(
       data = fig_data$panel_a_est,
-      aes(dist, ymin = mean - sd, ymax = mean + sd),
+      aes(dist, ymin = mean - sd, ymax = mean + sd,
+          colour = "RiboBA estimated (mean ± SD)"),
       width = 0.4,
-      colour = "black",
       linewidth = 0.4
     ) +
     facet_grid(rows = vars(cond), cols = vars(end), scales = "free_x") +
-    scale_color_manual(values = pal_a[conds_a], guide = "none") +
+    scale_colour_manual(name = NULL, values = series_cols_a) +
     scale_x_continuous(
       breaks = function(x) seq(floor(min(x)), ceiling(max(x)), by = 2),
-      minor_breaks = NULL
+      minor_breaks = NULL,
+      labels = label_number(accuracy = 1, style_negative = "minus")
     ) +
     labs(x = "Distance to P-site (nt)", y = "Cut probability") +
-    theme_nar(base_size = base_size, base_family = base_family, line_w = line_w)
+    theme_nar(base_size = base_size, base_family = base_family, line_w = line_w) +
+    theme(legend.position = "right", legend.key.width = grid::unit(12, "pt"))
 
   p_b <- ggplot(fig_data$panel_b_df, aes(x = sim, y = est)) +
     geom_point(alpha = 0.85, size = 1) +
@@ -252,7 +280,9 @@ plot_fig_s1 <- function(fig_data, base_family = "Arial", base_size = 8, line_w =
       size = 7 / 2.845,
       inherit.aes = FALSE
     ) +
-    labs(x = "Expected", y = "Estimated") +
+    scale_x_continuous(breaks = c(0, 0.1, 0.2)) +
+    scale_y_continuous(labels = label_number(style_negative = "minus")) +
+    labs(x = "Ground-truth ligation efficiency", y = "Estimated ligation efficiency") +
     theme_nar(base_size = base_size, base_family = base_family, line_w = line_w)
 
   fill_map <- c("5'" = nar_palette()[6], "3'" = nar_palette()[3])
@@ -261,7 +291,7 @@ plot_fig_s1 <- function(fig_data, base_family = "Arial", base_size = 8, line_w =
     geom_boxplot(width = 0.18, outlier.shape = NA, alpha = 0.8, linewidth = line_w) +
     geom_jitter(width = 0.08, size = 1, alpha = 0.8) +
     scale_fill_manual(values = fill_map, guide = "none") +
-    labs(x = NULL, y = "Correlation") +
+    labs(x = NULL, y = "Ligation efficiency correlation (r)") +
     coord_cartesian(ylim = c(0.88, 0.95)) +
     scale_y_continuous(expand = expansion(mult = c(0, 0.02))) +
     theme_nar(base_size = base_size, base_family = base_family, line_w = line_w)
@@ -274,33 +304,22 @@ plot_fig_s1 <- function(fig_data, base_family = "Arial", base_size = 8, line_w =
     "No add" = "grey60"
   )
   p_d <- ggplot() +
-    geom_point(
-      data = fig_data$panel_d_sim,
-      aes(base, prob, colour = base),
-      shape = 24,
-      size = 1.3,
-      fill = "white",
-      stroke = 0.25
-    ) +
     geom_errorbar(
       data = fig_data$panel_d_sum,
-      aes(base, ymin = pmax(mean - sd, 0), ymax = mean + sd),
+      aes(base, ymin = pmax(mean - sd, 0), ymax = mean + sd,
+          colour = "RiboBA estimated (mean ± SD)"),
       width = 0.8,
-      linewidth = 0.4,
-      colour = "black"
+      linewidth = 0.4
     ) +
     geom_point(
-      data = fig_data$panel_d_sum,
-      aes(base, mean, fill = base),
-      shape = 21,
-      size = 1.3,
-      colour = "black",
-      stroke = 0.25
+      data = fig_data$panel_d_sim,
+      aes(base, prob, colour = "Ground truth (simulated)"),
+      shape = 17,
+      size = 1.6
     ) +
-    scale_fill_manual(values = base_cols_d, guide = "none") +
-    scale_colour_manual(values = base_cols_d, guide = "none") +
+    scale_colour_manual(name = NULL, values = series_cols_a) +
     scale_y_continuous(labels = scales::percent_format(accuracy = 1), expand = expansion(mult = c(0.05, 0.12))) +
-    labs(x = NULL, y = "Probability") +
+    labs(x = NULL, y = "5' addition probability") +
     theme_nar(base_size = base_size, base_family = base_family, line_w = line_w) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 
@@ -313,31 +332,28 @@ plot_fig_s1 <- function(fig_data, base_family = "Arial", base_size = 8, line_w =
   p_e <- ggplot() +
     geom_errorbar(
       data = fig_data$panel_e_sum,
-      aes(base, ymin = pmax(mean - sd, 0), ymax = mean + sd),
+      aes(base, ymin = pmax(mean - sd, 0), ymax = mean + sd,
+          colour = "RiboBA estimated (mean ± SD)"),
       width = 0.8,
-      linewidth = 0.4,
-      colour = "black"
+      linewidth = 0.4
     ) +
     geom_point(
-      data = bind_rows(
-        fig_data$panel_e_sum %>% transmute(base, value = mean, type = "Estimated"),
-        fig_data$panel_e_sim
-      ),
-      aes(base, value, shape = type, fill = base),
-      size = 1.3,
-      stroke = 0.25
+      data = fig_data$panel_e_sim,
+      aes(base, value, colour = "Ground truth (simulated)"),
+      shape = 17,
+      size = 1.6
     ) +
-    scale_shape_manual(values = c(Estimated = 21, Expected = 24), name = NULL) +
-    scale_fill_manual(values = base_cols_e, guide = "none") +
-    labs(x = NULL, y = "Cleavability") +
+    scale_colour_manual(name = NULL, values = series_cols_a) +
+    labs(x = NULL, y = "Relative cleavability") +
     theme_nar(base_size = base_size, base_family = base_family, line_w = line_w)
 
-  row1 <- (p_a + plot_spacer()) + plot_layout(ncol = 2, widths = c(1, 0.5))
-  row2 <- (p_b + plot_spacer()) + plot_layout(ncol = 2, widths = c(1, 0.8))
-  row3 <- (p_c + p_e + p_d + plot_spacer()) + plot_layout(ncol = 4, widths = c(1, 1, 1, 0.3))
+  row1 <- p_a
+  row2 <- (p_b + p_c) + plot_layout(ncol = 2, widths = c(2.1, 0.6))
+  row3 <- (p_e + p_d) + plot_layout(ncol = 2, widths = c(1, 1), guides = "collect") &
+    theme(legend.position = "right")
 
   (row1 / row2 / row3) +
-    plot_layout(heights = c(2.5, 1.0, 1.0)) +
+    plot_layout(heights = c(2.5, 1.45, 1.0)) +
     plot_annotation(tag_levels = "A")
 }
 

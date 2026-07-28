@@ -1,7 +1,7 @@
 # ===== style kit =====
 library(ggplot2)
 library(grid)
-library(svglite)
+if (requireNamespace("svglite", quietly = TRUE)) library(svglite)
 
 get_script_dir <- function() {
   args <- commandArgs(trailingOnly = FALSE)

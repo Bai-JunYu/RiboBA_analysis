@@ -25,15 +25,29 @@ infer_project_dir <- function(project_dir = NULL) {
 }
 
 resolve_external_data_dir <- function(project_dir) {
+  # Highest priority: explicit override.
   env_dir <- Sys.getenv("RIBOBA_DATA_DIR", unset = "")
   if (nzchar(env_dir)) {
     return(normalizePath(env_dir, mustWork = TRUE))
   }
 
-  # Default sibling data repo next to this code repo
-  fallback <- normalizePath(file.path(project_dir, "..", "..", "RiboBA_analysis_data"), mustWork = FALSE)
-  if (dir.exists(fallback)) {
-    return(fallback)
+  # Otherwise probe common layouts. Each candidate is the directory that CONTAINS
+  # figure_ready_data/, so the Zenodo archives work after a plain unzip with no
+  # environment variable. (default_rds already carries the "figure_ready_data/"
+  # prefix, so we return the parent, not figure_ready_data itself.)
+  candidates <- c(
+    project_dir,                                              # data placed inside code repo
+    file.path(project_dir, ".."),                             # code + data unzipped side by side
+    file.path(project_dir, "..", "RiboBA_analysis_data_supp"),# sibling (this supplement)
+    file.path(project_dir, "..", "RiboBA_analysis_data"),     # sibling (original data repo)
+    file.path(project_dir, "..", "..", "RiboBA_analysis_data_supp"),
+    file.path(project_dir, "..", "..", "RiboBA_analysis_data")
+  )
+  for (cand in candidates) {
+    p <- normalizePath(cand, mustWork = FALSE)
+    if (dir.exists(file.path(p, "figure_ready_data"))) {
+      return(p)
+    }
   }
 
   ""
